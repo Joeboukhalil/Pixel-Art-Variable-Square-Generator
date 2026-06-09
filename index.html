@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pixel Art Variable Square Generator</title>
+
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    font-family:Arial, sans-serif;
+    background:linear-gradient(135deg,#0f172a,#111827,#1e293b);
+    color:white;
+    min-height:100vh;
+    text-align:center;
+}
+
+header{
+    padding:25px;
+}
+
+h1{
+    margin-bottom:10px;
+    font-size:2.5rem;
+}
+
+p{
+    color:#cbd5e1;
+}
+
+.controls{
+    margin:20px;
+}
+
+input[type=file]{
+    padding:10px;
+    background:#1e293b;
+    color:white;
+    border-radius:10px;
+}
+
+button{
+    padding:12px 20px;
+    margin:10px;
+    border:none;
+    border-radius:12px;
+    background:linear-gradient(45deg,#3b82f6,#8b5cf6);
+    color:white;
+    font-size:16px;
+    cursor:pointer;
+    transition:.3s;
+}
+
+button:hover{
+    transform:scale(1.05);
+}
+
+#preview{
+    display:flex;
+    justify-content:center;
+    margin:20px;
+}
+
+#mosaic{
+    background:#0b1220;
+    padding:20px;
+    border-radius:20px;
+    box-shadow:0 0 30px rgba(59,130,246,.3);
+    position:relative;
+}
+
+.pixel{
+    border-radius:2px;
+}
+
+canvas{
+    display:none;
+}
+</style>
+</head>
+<body>
+
+<header>
+<h1>Pixel Art Variable Square Generator</h1>
+<p>Upload a pixel art image and generate larger and smaller squares while keeping the original image shape.</p>
+</header>
+
+<div class="controls">
+<input type="file" id="upload" accept="image/*">
+<button id="downloadBtn">Download PNG</button>
+</div>
+
+<div id="preview">
+<div id="mosaic"></div>
+</div>
+
+<canvas id="canvas"></canvas>
+
+<script>
+const upload = document.getElementById("upload");
+const mosaic = document.getElementById("mosaic");
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+upload.addEventListener("change", function(e){
+
+    const file = e.target.files[0];
+    if(!file) return;
+
+    const img = new Image();
+
+    img.onload = function(){
+
+        const maxPixels = 80;
+
+        let width = img.width;
+        let height = img.height;
+
+        if(width > maxPixels || height > maxPixels){
+
+            const scale = Math.min(
+                maxPixels / width,
+                maxPixels / height
+            );
+
+            width = Math.round(width * scale);
+            height = Math.round(height * scale);
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        ctx.clearRect(0,0,width,height);
+        ctx.drawImage(img,0,0,width,height);
+
+        const data = ctx.getImageData(
+            0,
+            0,
+            width,
+            height
+        ).data;
+
+        mosaic.innerHTML = "";
+
+        const baseSize = 8;
+
+        mosaic.style.display = "grid";
+        mosaic.style.gridTemplateColumns =
+        `repeat(${width}, ${baseSize}px)`;
+
+        mosaic.style.gridTemplateRows =
+        `repeat(${height}, ${baseSize}px)`;
+
+        mosaic.style.gap = "0px";
+
+        for(let y=0;y<height;y++){
+
+            for(let x=0;x<width;x++){
+
+                const i = (y * width + x) * 4;
+
+                const r = data[i];
+                const g = data[i+1];
+                const b = data[i+2];
+                const a = data[i+3];
+
+                if(a < 10){
+
+                    const empty =
+                    document.createElement("div");
+
+                    empty.style.width =
+                    baseSize + "px";
+
+                    empty.style.height =
+                    baseSize + "px";
+
+                    mosaic.appendChild(empty);
+                    continue;
+                }
+
+                const pixel =
+                document.createElement("div");
+
+                pixel.className = "pixel";
+
+                pixel.style.background =
+                `rgba(${r},${g},${b},${a/255})`;
+
+                pixel.style.width =
+                baseSize + "px";
+
+                pixel.style.height =
+                baseSize + "px";
+
+                pixel.style.gridColumn =
+                (x+1);
+
+                pixel.style.gridRow =
+                (y+1);
+
+                pixel.style.position =
+                "relative";
+
+                const rand = Math.random();
+
+                if(rand < 0.10){
+
+                    pixel.style.width =
+                    (baseSize*3)+"px";
+
+                    pixel.style.height =
+                    (baseSize*3)+"px";
+
+                    pixel.style.zIndex = "3";
+
+                }else if(rand < 0.30){
+
+                    pixel.style.width =
+                    (baseSize*2)+"px";
+
+                    pixel.style.height =
+                    (baseSize*2)+"px";
+
+                    pixel.style.zIndex = "2";
+                }
+
+                mosaic.appendChild(pixel);
+            }
+        }
+    };
+
+    img.src = URL.createObjectURL(file);
+});
+
+document.getElementById("downloadBtn")
+.addEventListener("click",()=>{
+
+    html2canvas(mosaic,{
+        backgroundColor:null
+    }).then(canvas=>{
+
+        const link =
+        document.createElement("a");
+
+        link.download =
+        "variable-pixel-art.png";
+
+        link.href =
+        canvas.toDataURL("image/png");
+
+        link.click();
+    });
+
+});
+</script>
+
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+
+</body>
+</html>
